@@ -15,7 +15,6 @@ TG_TOKEN = os.getenv('TG_TOKEN')
 MODEL_DATA = os.getenv('MODEL_DATA', 'thegovind/pills1testmodel')
 LOW_VRAM_MODE = (os.getenv('LOW_VRAM', 'true').lower() == 'true')
 USE_AUTH_TOKEN = (os.getenv('USE_AUTH_TOKEN', 'true').lower() == 'true')
-SAFETY_CHECKER = (os.getenv('SAFETY_CHECKER', 'true').lower() == 'true')
 HEIGHT = int(os.getenv('HEIGHT', '512'))
 WIDTH = int(os.getenv('WIDTH', '512'))
 NUM_INFERENCE_STEPS = int(os.getenv('NUM_INFERENCE_STEPS', '50'))
@@ -31,12 +30,6 @@ pipe = pipe.to("cpu")
 # Load the img2img pipeline
 img2imgPipe = StableDiffusionImg2ImgPipeline.from_pretrained(MODEL_DATA, torch_dtype=torch_dtype, use_auth_token=USE_AUTH_TOKEN)
 img2imgPipe = img2imgPipe.to("cpu")
-
-# Disable safety checker if wanted
-def dummy_checker(images, **kwargs): return images, False
-if not SAFETY_CHECKER:
-    pipe.safety_checker = dummy_checker
-    img2imgPipe.safety_checker = dummy_checker
 
 def image_to_bytes(image):
     bio = BytesIO()
