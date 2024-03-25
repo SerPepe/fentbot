@@ -1,6 +1,6 @@
 import torch
 from torch import autocast
-from diffusers import DiffusionPipeline  # Changed from StableDiffusionPipeline
+from diffusers import DiffusionPipeline
 from PIL import Image
 
 import os
@@ -18,20 +18,14 @@ USE_AUTH_TOKEN = (os.getenv('USE_AUTH_TOKEN', 'true').lower() == 'true')
 HEIGHT = int(os.getenv('HEIGHT', '512'))
 WIDTH = int(os.getenv('WIDTH', '512'))
 NUM_INFERENCE_STEPS = int(os.getenv('NUM_INFERENCE_STEPS', '50'))
-STRENGTH = float(os.getenv('STRENGTH', '0.75'))  # corrected from STRENTH to STRENGTH
+STRENGTH = float(os.getenv('STRENGTH', '0.75'))
 GUIDANCE_SCALE = float(os.getenv('GUIDANCE_SCALE', '7.5'))
 
 torch_dtype = torch.float32 if LOW_VRAM_MODE else None
 
 # Load the pipeline
 pipe = DiffusionPipeline.from_pretrained(MODEL_DATA, torch_dtype=torch_dtype, use_auth_token=USE_AUTH_TOKEN)
-pipe = pipe.to("cuda" if torch.cuda.is_available() else "cpu")  # Adjusted for device availability
-
-# The rest of your code remains the same...
-
-# However, note that DiffusionPipeline might not have an img2img feature directly like StableDiffusionImg2ImgPipeline,
-# so if you were planning to use that feature specifically, you might need to adjust your approach or stick with the original pipeline.
-# For this simplified example, we will remove img2img related parts and focus solely on text-to-image generation.
+pipe = pipe.to("cuda" if torch.cuda.is_available() else "cpu")
 
 def image_to_bytes(image):
     bio = BytesIO()
@@ -47,17 +41,27 @@ def get_try_again_markup():
 
 def generate_image(prompt, seed=None, height=HEIGHT, width=WIDTH, num_inference_steps=NUM_INFERENCE_STEPS, strength=STRENGTH, guidance_scale=GUIDANCE_SCALE):
     seed = seed if seed is not None else random.randint(1, 10000)
-    generator = torch.Generator(device='cuda').manual_seed(seed)  # Corrected to specify device for generator
+    generator = torch.Generator(device='cuda').manual_seed(seed)
 
-    # For the simplified case, we do not use img2img features here.
     with autocast("cuda"):
         image = pipe(prompt=prompt, height=height, width=width, num_inference_steps=num_inference_steps, generator=generator)["sample"][0]
     return image, seed
 
-# The async functions and application setup remain the same...
+async def generate_and_send_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    progress_msg = await update.message.reply_text("Generating image...", reply_to_message_id=update.message.message_id)
+    im, seed = generate_image(prompt=update.message.text)
+    await context.bot.delete_message(chat_id=progress_msg.chat_id, message_id=progress_msg.message_id)
+    await context.bot.send_photo(update.effective_user.id, image_to_bytes(im), caption=f'"{update.message.text}" (Seed: {seed})', reply_markup=get_try_again_markup(), reply_to_message_id=update.message.message_id)
+
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    prompt = query.message.reply_to_message.text
+    im, seed = generate_image(prompt=prompt)
+    await context.bot.send_photo(query.message.chat_id, image_to_bytes(im), caption=f'"{prompt}" (Seed: {seed})', reply_markup=get_try_again_markup())
 
 app = ApplicationBuilder().token(TG_TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, generate_and_send_photo))
-# Note: Removed the handler for PHOTO since img2img is not addressed here
 app.add_handler(CallbackQueryHandler(button))
 app.run_polling()
