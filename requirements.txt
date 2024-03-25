@@ -1,5 +1,5 @@
 diffusers>=0.10.0
-transformers==4.24.0
+transformers>=4.30.0  # Update to a more recent version
 scipy==1.7.3
 ftfy==6.1.1
 python-telegram-bot>=20.0a2
