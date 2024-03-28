@@ -29,10 +29,12 @@ img2imgPipe = StableDiffusionImg2ImgPipeline.from_pretrained(MODEL_DATA, use_aut
 
 # Disable safety checker if desired
 if not SAFETY_CHECKER:
-    def dummy_checker(images, **kwargs): return images, False
+    def dummy_checker(images, **kwargs):
+        # Return a list of False, one for each image
+        return images, [False] * len(images)
     pipe.safety_checker = dummy_checker
     img2imgPipe.safety_checker = dummy_checker
-
+    
 def image_to_bytes(image):
     bio = BytesIO()
     bio.name = 'image.jpeg'
