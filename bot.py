@@ -34,7 +34,7 @@ if not SAFETY_CHECKER:
         return images, [False] * len(images)
     pipe.safety_checker = dummy_checker
     img2imgPipe.safety_checker = dummy_checker
-    
+
 def image_to_bytes(image):
     bio = BytesIO()
     bio.name = 'image.jpeg'
@@ -74,7 +74,8 @@ async def generate_command_handler(update: Update, context: ContextTypes.DEFAULT
     progress_msg = await update.message.reply_text("Generating image...", reply_to_message_id=update.message.message_id)
     im, seed = generate_image(prompt=combined_prompt)
     await context.bot.delete_message(chat_id=progress_msg.chat_id, message_id=progress_msg.message_id)
-    await context.bot.send_photo(update.effective_user.id, image_to_bytes(im), caption=f'"{combined_prompt}" (Seed: {seed})', reply_markup=get_try_again_markup(), reply_to_message_id=update.message.message_id)
+    # Change here: Use update.effective_chat.id to ensure the photo is sent to the group or DM as appropriate
+    await context.bot.send_photo(update.effective_chat.id, image_to_bytes(im), caption=f'"{combined_prompt}" (Seed: {seed})', reply_markup=get_try_again_markup(), reply_to_message_id=update.message.message_id)
 
 app = ApplicationBuilder().token(TG_TOKEN).build()
 
